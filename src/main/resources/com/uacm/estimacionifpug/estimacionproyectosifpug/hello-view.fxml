@@ -30,6 +30,8 @@
 
             <Label text="Tiempo que va a durar el proyecto en meses:" style="-fx-font-weight: bold; -fx-font-size: 16px"/>
             <TextField fx:id="numeroDeMesesDelTrabajo" promptText="Meses"/>
+            <Label text="Numero de personas en el equipo:" style="-fx-font-weight: bold; -fx-font-size: 16px"/>
+            <TextField fx:id="numeroDePersonasEnEquipo" promptText="Numero 1,2,3.5"/>
 
             <!--Segundo tema-->
             <Label text="2. Identificar las funciones"
@@ -141,10 +143,19 @@
             <Separator orientation="HORIZONTAL"/>
 
             <VBox spacing="10.0" alignment="CENTER_LEFT">
-                <Button text="Calcular Puntos de Función Totales"
-                        onAction="#onCalcularPuntosFuncionClick"
-                        style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-padding: 10 20 10 20;"/>
+                <HBox spacing="15.0" alignment="CENTER_LEFT">
+                    <Button text="Calcular Puntos de Función Totales"
+                            onAction="#onCalcularPuntosFuncionClick"
+                            style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-padding: 10 20 10 20;"/>
 
+                    <Button text="Vaciar Campos / Limpiar Todo"
+                            onAction="#onLimpiarCamposClick"
+                            style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-padding: 10 20 10 20;"/>
+
+                    <Button text="Precargar Datos de Prueba (PDF)"
+                            onAction="#onPrecargarDatosVeterinariaClick"
+                            style="-fx-background-color: #34495e; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 15px; -fx-padding: 10 20 10 20;"/>
+                </HBox>
                 <Label text="Resumen General de la Estimación:" style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;"/>
 
                 <TextArea fx:id="txtResumen" editable="false" prefHeight="280.0"

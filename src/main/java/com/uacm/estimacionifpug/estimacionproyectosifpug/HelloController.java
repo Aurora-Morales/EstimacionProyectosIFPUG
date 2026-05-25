@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HelloController {
-
     @FXML private TextField numeroDeMesesDelTrabajo;
+    @FXML private TextField numeroDePersonasEnEquipo;
     @FXML private TextField numeroFuncionesDatosILF;
     @FXML private TextField numeroFuncionesDatosEIF;
     @FXML private TextField numeroFuncionesTransaccionesEI;
@@ -32,10 +32,10 @@ public class HelloController {
     private final List<TarjetaTransaccionControles> listaEO = new ArrayList<>();
     private final List<TarjetaTransaccionControles> listaEQ = new ArrayList<>();
 
-    private int totalPuntosFuncionSinAjuste; //Contador para los puntos de funcion sin ajustar
-    public long totalPuntosFuncionAjustados; //COntador para los puntos de funcion con ajuste
+    private int totalPuntosFuncionSinAjuste; //Contador para los puntos de función sin ajustar
+    public long totalPuntosFuncionAjustados; //Contador para los puntos de función con ajuste
 
-    // Matriz con los títulos y las opciones exactas proporcionadas de las 14 GSC'S
+    // Matriz con los títulos y las opciones exactas proporcionadas de las 14 GSCS
     private final String[][] opcionesGSCs = {
             {"1. Comunicación de Datos", "0: App \"stand-alone\" sin red.", "1: Solo usa una impresora local.", "2: Descarga archivos vía FTP simple.", "3: Usa servicios Web (APIs) estándar.", "4: Integración fluida con múltiples sistemas remotos.", "5: Redes de alta velocidad dedicadas con protocolos específicos."},
             {"2. Procesamiento Distribuido", "0: Todo en un solo servidor/PC.", "1: El usuario prepara datos y el servidor los procesa luego.", "2: Los datos se capturan en un sitio y se procesan en otro.", "3: Procesamiento en varios servidores bajo el control de la app.", "4: Procesamiento dinámico entre cliente y servidor.", "5: Sistemas en la nube con balanceo de carga automático y global."},
@@ -221,32 +221,48 @@ public class HelloController {
     // BOTÓN DE CÁLCULO PRINCIPAL
     @FXML
     protected void onCalcularPuntosFuncionClick() {
+        // 1. REINICIAR CONTADORES GLOBALES (Evita que se acumulen los valores al recalcular)
+        totalPuntosFuncionSinAjuste = 0;
+        totalPuntosFuncionAjustados = 0;
+
         String complejidadSistema = "";
         long productividad = 0;
         long esfuerzo = 0;
-        double numPersonas = 0;
+        double numeroPersonasEstimado;
+        double tiempoAjuste = 0;
+        double tiempo = 0;
+        int costo = 0;
+        int costo_hora = 120;
+        double eficiencia = 0.7;
+        int loc = 0;
+        int numeroPersonas;
+        double numeroDeMeses;
+        try {
+            numeroPersonas = Integer.parseInt(numeroDePersonasEnEquipo.getText().trim());
+            numeroDeMeses = Double.parseDouble(numeroDeMesesDelTrabajo.getText().trim());
+        } catch (NumberFormatException e) {
+            txtResumen.setText("Error: Por favor introduce valores numéricos válidos en 'Número de personas' y 'Meses de trabajo'.");
+            return;
+        }
+
         StringBuilder reporte = new StringBuilder();
         reporte.append("=========================================================\n");
         reporte.append("          REPORTE DE CONTEO ELEMENTOS IFPUG              \n");
         reporte.append("=========================================================\n\n");
 
-        //Procesar ILF
+        // Procesar listas (ahora sumarán desde 0)
         reporte.append("--- FUNCIONES DE DATOS: ILF ---\n");
         procesarListaDatosILF(listaILF, reporte);
 
-        //Procesar EIF
         reporte.append("\n--- FUNCIONES DE DATOS: EIF ---\n");
         procesarListaDatosEIF(listaEIF, reporte);
 
-        //Procesar EI
         reporte.append("\n--- FUNCIONES DE TRANSACCIÓN: EI ---\n");
         procesarListaTransaccionesEntradaExterna(listaEI, reporte);
 
-        //Procesar EO
         reporte.append("\n--- FUNCIONES DE TRANSACCIÓN: EO ---\n");
         procesarListaTransaccionesEO(listaEO, reporte);
 
-        //Procesar EQ
         reporte.append("\n--- FUNCIONES DE TRANSACCIÓN: EQ ---\n");
         procesarListaTransaccionesEQ(listaEQ, reporte);
 
@@ -283,7 +299,6 @@ public class HelloController {
         // Aplicación de la fórmula estándar de la norma IFPUG
         double vaf = 0.65 + (0.01 * sumaGSCs);
 
-        // Verificar la complejidad del sistema según el impacto del Factor VAF
         if (vaf < 0.85) {
             complejidadSistema = "Sistema muy simple";
         } else if (vaf >= 0.85 && vaf <= 1.15) {
@@ -292,33 +307,55 @@ public class HelloController {
             complejidadSistema = "Sistema altamente complejo";
         }
 
-        //Total de puntos de funcion con ajuste
         totalPuntosFuncionAjustados = Math.round(totalPuntosFuncionSinAjuste * vaf);
 
         reporte.append("\n---------------------------------------------------------\n");
         reporte.append(String.format("Suma Total del Grado de Influencia (GSCs): %d\n", sumaGSCs));
         reporte.append(String.format("Factor de Ajuste de Valor Calculado (VAF): %.2f\n", vaf));
         reporte.append(String.format("Complejidad del sistema: %s\n", complejidadSistema));
-        reporte.append(String.format("Puntos de función con ajuste PF = %d\n", totalPuntosFuncionAjustados));
-
+        reporte.append(String.format("Puntos de función con ajuste APF = %d\n", totalPuntosFuncionAjustados));
 
         reporte.append("\n=========================================================\n");
         reporte.append(" ESTIMACIONES DE PRODUCTIVIDAD, ESFUERZO, COSTO Y TIEMPO  \n");
         reporte.append("=========================================================\n\n");
 
         // Prevenir colapso por división entre cero si no hay puntos de función calculados
-        if (totalPuntosFuncionAjustados > 0) {
-            productividad = 8 / totalPuntosFuncionAjustados;
+        if (totalPuntosFuncionSinAjuste > 0) {
+            productividad = 8; // Tasa fija base de horas por punto
             esfuerzo = totalPuntosFuncionAjustados * productividad;
-            numPersonas = (double) esfuerzo / (Integer.parseInt(numeroDeMesesDelTrabajo.getText().trim()) * 160);
+            costo = (int) esfuerzo * costo_hora;
+            numeroPersonasEstimado = (double) esfuerzo / (numeroDeMeses * 160);
+            tiempo = (double) esfuerzo / (numeroPersonas * 160);
+            tiempoAjuste = (double) esfuerzo / (numeroPersonas * 160 * eficiencia);
 
-            reporte.append(String.format("Productividad en 8 horas laborales: %d horas/AFP\n", productividad));
+            // (Tus appends de reporte se quedan exactamente igual)
             reporte.append(String.format("Esfuerzo: %d horas\n", esfuerzo));
-            reporte.append(String.format("------> Trabajo total: %d\n", esfuerzo));
-            reporte.append(String.format("Número de trabajadores necesarios: %.2f\n", numPersonas));
+            reporte.append(String.format("Productividad en 8 horas laborales: %d horas/AFP\n", productividad));
+            reporte.append(String.format("%.2f trabajadores necesarios en un tiempo estimado de %.2f meses: \n", numeroPersonasEstimado, numeroDeMeses));
+            reporte.append(String.format("Tiempo estimado para terminar el producto %.2f meses\n", tiempo));
+            reporte.append(String.format("Tiempo estimado para terminar el producto con ajuste realista del 0.7 de eficiencia %.2f\n", tiempoAjuste));
+            reporte.append(String.format("Costo del proyecto para un programador Junior que gana $120/h: %d\n", costo));
+
         } else {
-            reporte.append("No se puede calcular productividad ni esfuerzo: Los Puntos de Función Ajustados deben ser mayores a 0.\n");
+            reporte.append("No se puede calcular productividad ni esfuerzo: Los Puntos de Función Sin Ajustar deben ser mayores a 0.\n");
         }
+
+        reporte.append("\n=========================================================\n");
+        reporte.append("Recomendación de quipo por Puntos de función con ajuste (APF)\n");
+        recomendacionEquipo(totalPuntosFuncionAjustados, reporte);
+        reporte.append("\n=========================================================\n");
+
+        reporte.append("\n=========================================================\n");
+        reporte.append("         ESTIMACIONES POR FASES DEL CICLO DE VIDA          \n");
+        reporte.append("=========================================================\n\n");
+
+        estimacionxFasesDelCicloDeVida(esfuerzo, costo, tiempoAjuste, reporte);
+
+        reporte.append("\n=========================================================\n");
+        reporte.append("               ESTIMACION DEL TAMAÑO DEL CODIGO            \n");
+        reporte.append("=========================================================\n\n");
+        loc = 29*totalPuntosFuncionSinAjuste;
+        reporte.append(String.format("Lineas de código necesarias para el proyecto: %d\n", loc));
 
         txtResumen.setText(reporte.toString());
     }
@@ -399,7 +436,7 @@ public class HelloController {
         }
     }
 
-
+    //Metodo que calcula los DET'S Y RET'S de la Lista de datos EIF
     private void procesarListaDatosEIF(List<TarjetaDatosControles> lista, StringBuilder sb) {
         String complejidad = "";
         if(lista.isEmpty()) { sb.append("  (No se registraron elementos)\n"); return; }
@@ -693,4 +730,293 @@ public class HelloController {
             sb.append(String.format("  > [%s] -> DETs: %d | FTRs: %d\n Complejidad: %s\n", nombre, dets, ftrs, complejidad));
         }
     }
+
+    //Metodo para la estimacion de las faces del ciclo de vida
+    private void estimacionxFasesDelCicloDeVida(long esfuerzo, double costo, double tiempoAjuste, StringBuilder sb) {
+        // Definición de los porcentajes del ciclo de vida en formato decimal (Double) proporcionados por el usuario
+        double pctPlanificacion = 0.09;
+        double pctEspecificacion = 0.11;
+        double pctDiseno         = 0.15;
+        double pctCodificacion   = 0.43;
+        double pctPruebas        = 0.16;
+        double pctImplantacion   = 0.06;
+
+        // 1. Distribución del Esfuerzo (Horas)
+        double esfPlan = esfuerzo * pctPlanificacion;
+        double esfEsp  = esfuerzo * pctEspecificacion;
+        double esfDis  = esfuerzo * pctDiseno;
+        double esfCod  = esfuerzo * pctCodificacion;
+        double esfPru  = esfuerzo * pctPruebas;
+        double esfImp  = esfuerzo * pctImplantacion;
+
+        // 2. Distribución de los Costos ($)
+        double cosPlan = costo * pctPlanificacion;
+        double cosEsp  = costo * pctEspecificacion;
+        double cosDis  = costo * pctDiseno;
+        double cosCod  = costo * pctCodificacion;
+        double cosPru  = costo * pctPruebas;
+        double cosImp  = costo * pctImplantacion;
+
+        // 3. Distribución del Tiempo (Meses)
+        double tiePlan = tiempoAjuste * pctPlanificacion;
+        double tieEsp  = tiempoAjuste * pctEspecificacion;
+        double tieDis  = tiempoAjuste * pctDiseno;
+        double tieCod  = tiempoAjuste * pctCodificacion;
+        double tiePru  = tiempoAjuste * pctPruebas;
+        double tieImp  = tiempoAjuste * pctImplantacion;
+
+        // Construcción del Reporte formateado en texto plano para el TextArea
+        sb.append(String.format("%-18s | %-15s | %-15s | %-15s\n", "Fase del Ciclo", "Esfuerzo (hrs)", "Costo ($)", "Tiempo (meses)"));
+        sb.append("-------------------------------------------------------------------------\n");
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "1. Planificación", esfPlan, cosPlan, tiePlan));
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "2. Especificación", esfEsp, cosEsp, tieEsp));
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "3. Análisis/Diseño", esfDis, cosDis, tieDis));
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "4. Codificación", esfCod, cosCod, tieCod));
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "5. Pruebas", esfPru, cosPru, tiePru));
+        sb.append(String.format("%-18s | %-15.2f | %-15.2f | %-15.2f\n", "6. Implantación", esfImp, cosImp, tieImp));
+        sb.append("-------------------------------------------------------------------------\n");
+        sb.append(String.format("%-18s | %-15d | %-15.2f | %-15.2f\n", "TOTAL ESTIMADO", esfuerzo, costo, tiempoAjuste));
+    }
+
+    //Metodo para verificar si son los empleado necesarios para los puntos de funcion calculados
+    private void recomendacionEquipo(long apf ,StringBuilder sb){
+        String personarNecesarias = "";
+        if(apf <= 0){
+            personarNecesarias = "Error: No pueden haber puntos de funcion negativos o iguales a 0";
+        }
+        if(apf < 50){
+            personarNecesarias = "1-3 personas";
+        }else {
+            if (apf <= 200){
+                personarNecesarias = "3-7 personas";
+            }else{
+                personarNecesarias = "7+ personas";
+            }
+        }
+        sb.append(personarNecesarias);
+    }
+
+    @FXML
+    protected void onLimpiarCamposClick() {
+        // 1. Limpiar los TextFields principales de entrada de texto
+        numeroDeMesesDelTrabajo.clear();
+        numeroDePersonasEnEquipo.clear();
+        numeroFuncionesDatosILF.clear();
+        numeroFuncionesDatosEIF.clear();
+        numeroFuncionesTransaccionesEI.clear();
+        numeroFuncionesTransaccionesEO.clear();
+        numeroFuncionesTransaccionesEQ.clear();
+
+        // 2. Limpiar las listas en memoria
+        listaILF.clear();
+        listaEIF.clear();
+        listaEI.clear();
+        listaEO.clear();
+        listaEQ.clear();
+
+        // 3. Limpiar los contenedores visuales de las tarjetas de la interfaz
+        containerFuncionesDatosILF.getChildren().clear();
+        containerFuncionesDatosEIF.getChildren().clear();
+        containerFuncionesTransaccionesEI.getChildren().clear();
+        containerFuncionesTransaccionesEO.getChildren().clear();
+        containerFuncionesTransaccionesEQ.getChildren().clear();
+
+        // 4. Desmarcar todos los CheckBox de las 14 GSCs
+        for (CheckBox[] grupo : gruposDeCasillas) {
+            for (CheckBox chk : grupo) {
+                chk.setSelected(false);
+            }
+        }
+
+        // 5. Reiniciar los contadores de puntos de función
+        totalPuntosFuncionSinAjuste = 0;
+        totalPuntosFuncionAjustados = 0;
+
+        // 6. Limpiar el TextArea del reporte escrito
+        txtResumen.clear();
+    }
+
+    @FXML
+        protected void onPrecargarDatosVeterinariaClick() {
+            // 1. Limpiar cualquier estado anterior para asegurar una carga limpia
+            onLimpiarCamposClick();
+
+            // 2. Definir parámetros de trabajo estimados por defecto
+            numeroDePersonasEnEquipo.setText("3");
+            numeroDeMesesDelTrabajo.setText("1");
+
+            // 3. Asignar las cantidades exactas de funciones del PDF
+            numeroFuncionesDatosILF.setText("4");
+            numeroFuncionesDatosEIF.setText("0");
+            numeroFuncionesTransaccionesEI.setText("6");
+            numeroFuncionesTransaccionesEO.setText("3");
+            numeroFuncionesTransaccionesEQ.setText("5");
+
+            // 4. Forzar la generación visual de las tarjetas en la interfaz
+            onGenerarFuncionesDatosILFClick();
+            onGenerarFuncionesDatosEIFClick();
+            onGenerarFuncionesTransaccionesEI();
+            onGenerarFuncionesTransaccionesEO();
+            onGenerarFuncionesTransaccionesEQ();
+
+            // =========================================================================
+            // 5. RELLENAR VALORES DE FUNCIONES DE DATOS (ILF)
+            // =========================================================================
+            // ILF 1: Gestión de Productos (9 DETs, 1 RET)
+            if (listaILF.size() >= 1) {
+                listaILF.get(0).name.setText("Gestión de Productos");
+                listaILF.get(0).det.setText("id,nombre,codigo,categoria,precio,stock,stockMinimo,proveedor,fechaCaducidad");
+                listaILF.get(0).ret.setText("Producto");
+            }
+            // ILF 2: Gestión de Usuarios (3 DETs, 1 RET)
+            if (listaILF.size() >= 2) {
+                listaILF.get(1).name.setText("Gestión de Usuarios");
+                listaILF.get(1).det.setText("idUsuario,username,password");
+                listaILF.get(1).ret.setText("Usuario");
+            }
+            // ILF 3: Registro de Pedidos (4 DETs, 1 RET)
+            if (listaILF.size() >= 3) {
+                listaILF.get(2).name.setText("Registro de Pedidos");
+                listaILF.get(2).det.setText("idPedido,fechaEnvio,correo,costo");
+                listaILF.get(2).ret.setText("Pedido");
+            }
+            // ILF 4: Registro de Pacientes Clínicos (9 DETs, 1 RET)
+            if (listaILF.size() >= 4) {
+                listaILF.get(3).name.setText("Registro de Pacientes Clínicos");
+                listaILF.get(3).det.setText("idPaciente,nombreMascota,raza,edad,nombreDueno,telefono,descripcion, medicamentos,cajas");
+                listaILF.get(3).ret.setText("Paciente");
+            }
+
+            // =========================================================================
+            // 6. RELLENAR VALORES DE ENTRADAS EXTERNAS (EI) - Formulario/Escritura
+            // =========================================================================
+            // EI 1: Registrar Producto (8 DETs, 1 FTR)
+            if (listaEI.size() >= 1) {
+                listaEI.get(0).name.setText("Registrar Producto");
+                listaEI.get(0).det.setText("nombre,categoria,preciov,precioc,stock,proveedor,fechaCaducidad,imagen");
+                listaEI.get(0).ftr.setText("Tabla_Productos");
+            }
+            // EI 2: Modificar Producto (9 DETs, 1 FTR)
+            if (listaEI.size() >= 2) {
+                listaEI.get(1).name.setText("Modificar Producto");
+                listaEI.get(1).det.setText("id,nombre,categoria,precioc,preciov,stock,proveedor,fechaCaducidad,imagen");
+                listaEI.get(1).ftr.setText("Tabla_Productos");
+            }
+            // EI 3: Eliminar Producto (2 DETs, 1 FTR)
+            if (listaEI.size() >= 3) {
+                listaEI.get(2).name.setText("Eliminar Producto");
+                listaEI.get(2).det.setText("idProducto,mensajeExito");
+                listaEI.get(2).ftr.setText("Tabla_Productos");
+            }
+            // EI 4: Registrar Paciente (9 DETs, 1 FTR)
+            if (listaEI.size() >= 4) {
+                listaEI.get(3).name.setText("Registrar Paciente");
+                listaEI.get(3).det.setText("id,nombreMascota,raza,edad,nombreDueno,telefono,descripcion,medicamentos,cajas");
+                listaEI.get(3).ftr.setText("Tabla_Pacientes");
+            }
+            // EI 5: Modificar Paciente (8 DETs, 1 FTR)
+            if (listaEI.size() >= 5) {
+                listaEI.get(4).name.setText("Modificar Paciente");
+                listaEI.get(4).det.setText("nombreMascota,raza,edad,nombreDueno,telefono,descripcion,medicamento,cajas");
+                listaEI.get(4).ftr.setText("Tabla_Pacientes");
+            }
+            // EI 6: Modificar Contrsena (2 DETs, 1 FTR)
+            if (listaEI.size() >= 5) {
+                listaEI.get(5).name.setText("Modificar Contraseña");
+                listaEI.get(5).det.setText("contrasenaAnterior,contranaActual");
+                listaEI.get(5).ftr.setText("Tabla_Usuarios");
+            }
+
+            // =========================================================================
+            // 7. RELLENAR VALORES DE SALIDAS EXTERNAS (EO) - Reportes con Lógica/Cálculo
+            // =========================================================================
+            // EO 1: Reporte Alertas Stock Bajo/Caducidad (5 DETs, 1 FTR)
+            if (listaEO.size() >= 1) {
+                listaEO.get(0).name.setText("Reporte Alertas Inventario");
+                listaEO.get(0).det.setText("nombre,nombreprove,stock,estado,subtotal");
+                listaEO.get(0).ftr.setText("Tabla_Productos");
+            }
+            // EO 2: Envío Automático de Pedidos por Correo (6 DETs, 1 FTRs)
+            if (listaEO.size() >= 2) {
+                listaEO.get(1).name.setText("Envío Correo Proveedor");
+                listaEO.get(1).det.setText("nombreprod,nombreprov,correoProveedor,stock,estado,subtotal");
+                listaEO.get(1).ftr.setText("Tabla_Pedidos");
+            }
+            // EO 3: Reporte Clínico en PDF (9 DETs, 1 FTR)
+            if (listaEO.size() >= 3) {
+                listaEO.get(2).name.setText("Exportar PDF Historial (FUR14)");
+                listaEO.get(2).det.setText("id,nombreMascota,edad,raza,nombreDueno,telefono,descripcion,medicamentos,cajas");
+                listaEO.get(2).ftr.setText("Tabla_Pacientes");
+            }
+
+            // =========================================================================
+            // 8. RELLENAR VALORES DE CONSULTAS EXTERNAS (EQ) - Recuperación Directa
+            // =========================================================================
+            // EQ 1: Login de Usuario (3 DETs, 1 FTR)
+            if (listaEQ.size() >= 1) {
+                listaEQ.get(0).name.setText("Autenticación de Usuario");
+                listaEQ.get(0).det.setText("username,password");
+                listaEQ.get(0).ftr.setText("Tabla_Usuarios");
+            }
+            // EQ 2: Consultar Producto Filtros (7-9 DETs, 1 FTR)
+            if (listaEQ.size() >= 2) {
+                listaEQ.get(1).name.setText("Buscar Producto Filtros");
+                listaEQ.get(1).det.setText("nombre,categoria,preciov,precioc,stock,proveedor,fechaCaducidad,imagen");
+                listaEQ.get(1).ftr.setText("Tabla_Productos");
+            }
+            // EQ 3: Consultar Historial (6 DETs, 1 FTR)
+            if (listaEQ.size() >= 3) {
+                listaEQ.get(2).name.setText("Consultar Historial");
+                listaEQ.get(2).det.setText("nombreproveedor,nombreproducto,estado,stock,subtotal,correo");
+                listaEQ.get(2).ftr.setText("Tabla_Productos");
+            }
+            // EQ 4: Buscar Historial Clínico (8-10 DETs, 1 FTR)
+            if (listaEQ.size() >= 4) {
+                listaEQ.get(3).name.setText("Buscar Paciente");
+                listaEQ.get(3).det.setText("NombrePaciente,fechaConsulta,id,raza,edad,nombreDueno,telefono,descripcion,medicamentos,cajas");
+                listaEQ.get(3).ftr.setText("Tabla_Pacientes");
+            }
+            // EQ 5: Visualizar pedido (6 DETs, 2 FTRs)
+            if (listaEQ.size() >= 5) {
+                listaEQ.get(4).name.setText("Visualizar pedido");
+                listaEQ.get(4).det.setText("nombreprod,nombreprov,stock,precionVenta,total,correo");
+                listaEQ.get(4).ftr.setText("Tabla_Productos");
+            }
+
+            // =========================================================================
+            // 9. CONFIGURAR VALORES DE LAS 14 GSCs (Sección 7 del PDF)
+            // =========================================================================
+            int[] valoresGSCs = {
+                    2, // 1. Comunicación de datos (Usa APIs estándar)
+                    1, // 2. Procesamiento distribuido (Preparación diferida)
+                    3, // 3. Rendimiento (Tiempos de respuesta estrictos < 2 seg)
+                    2, // 4. Configuración del equipamiento (Laptops estándar de la empresa)
+                    3, // 5. Tasa de transacciones (Optimización de base de datos)
+                    4, // 6. Entrada de datos en línea (24% al 30% interactivo)
+                    3, // 7. Eficiencia del usuario final (Teclas rápidos/autocompletado)
+                    4, // 8. Actualización en línea (Protección contra pérdidas)
+                    3, // 9. Procesamiento complejo (Lógica extensa / If-Then-Else)
+                    1, // 10. Reusabilidad (Código reusable internamente)
+                    1, // 11. Facilidad de instalación (Instalación manual con guía)
+                    2, // 12. Facilidad de operación (Alertas de error básicas)
+                    2, // 13. Ubicaciones múltiples (Mismo hardware en sucursales)
+                    2  // 14. Facilidad de cambio (Tablas de parámetros simples)
+            };
+
+            for (int i = 0; i < valoresGSCs.length && i < gruposDeCasillas.size(); i++) {
+                int valorSeleccionado = valoresGSCs[i];
+                if (valorSeleccionado >= 0 && valorSeleccionado <= 5) {
+                    gruposDeCasillas.get(i)[valorSeleccionado].setSelected(true);
+                }
+            }
+
+            txtResumen.setText("¡Métricas completas de la Veterinaria 'Bloom' cargadas con éxito!\n" +
+                    "Se mapearon:\n" +
+                    "- 4 Funciones de Datos (ILF)\n" +
+                    "- 6 Entradas Externas (EI)\n" +
+                    "- 3 Salidas Externas (EO)\n" +
+                    "- 5 Consultas Externas (EQ)\n" +
+                    "- Las 14 GSCs con los pesos del PDF.\n\n" +
+                    "Ya puedes pulsar el botón 'Calcular Puntos de Función Totales'.");
+        }
 }
