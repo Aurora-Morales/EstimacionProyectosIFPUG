@@ -369,7 +369,7 @@ public class HelloController {
         reporte.append("\n=========================================================\n");
         reporte.append("               ESTIMACION DEL TAMAÑO DEL CODIGO            \n");
         reporte.append("=========================================================\n\n");
-        loc = 29*totalPuntosFuncionSinAjuste;
+        loc = 60*totalPuntosFuncionSinAjuste;
         reporte.append(String.format("Lineas de código necesarias para el proyecto: %d\n", loc));
 
         txtResumen.setText(reporte.toString());
