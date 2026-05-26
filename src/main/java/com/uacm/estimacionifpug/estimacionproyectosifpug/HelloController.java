@@ -35,6 +35,15 @@ public class HelloController {
     private int totalPuntosFuncionSinAjuste; //Contador para los puntos de función sin ajustar
     public long totalPuntosFuncionAjustados; //Contador para los puntos de función con ajuste
 
+    //Cada punto de función requiere 10 horas de trabajo
+    //Este valor no es universal, depende de:
+    //    -experiencia del equipo
+    //    -tecnología
+        //    -complejidad real
+    long productividad = 10; // Tasa fija base de horas por punto
+    double costo_hora = 81.87; // Sueldo de un Líder de proyectos en México según la info
+    double eficiencia = 0.7;
+
     // Matriz con los títulos y las opciones exactas proporcionadas de las 14 GSCS
     private final String[][] opcionesGSCs = {
             {"1. Comunicación de Datos", "0: App \"stand-alone\" sin red.", "1: Solo usa una impresora local.", "2: Descarga archivos vía FTP simple.", "3: Usa servicios Web (APIs) estándar.", "4: Integración fluida con múltiples sistemas remotos.", "5: Redes de alta velocidad dedicadas con protocolos específicos."},
@@ -147,8 +156,6 @@ public class HelloController {
         generarTarjetasTransacciones(numeroFuncionesTransaccionesEQ, containerFuncionesTransaccionesEQ, "Buscar Usuario", listaEQ);
     }
 
-
-
     private void generarTarjetasDatos(TextField input, VBox container, String sugerencia,
                                       List<TarjetaDatosControles> listaMemoria) {
         try {
@@ -226,17 +233,16 @@ public class HelloController {
         totalPuntosFuncionAjustados = 0;
 
         String complejidadSistema = "";
-        long productividad = 0;
         long esfuerzo = 0;
         double numeroPersonasEstimado;
-        double tiempoAjuste = 0;
-        double tiempo = 0;
-        int costo = 0;
-        int costo_hora = 120;
-        double eficiencia = 0.7;
+        double tiempoAjuste = 0.0;
+        double tiempo = 0.0;
+        double costo = 0.0;
         int loc = 0;
-        int numeroPersonas;
+        double numeroPersonas;
         double numeroDeMeses;
+
+        //VAlidar si no se ingresan numeros
         try {
             numeroPersonas = Integer.parseInt(numeroDePersonasEnEquipo.getText().trim());
             numeroDeMeses = Double.parseDouble(numeroDeMesesDelTrabajo.getText().trim());
@@ -271,7 +277,7 @@ public class HelloController {
         reporte.append("PF =").append(totalPuntosFuncionSinAjuste);
 
         //Cálculo de las 14 caractericas GSC'S
-        reporte.append("\n=========================================================");
+        reporte.append("\n=========================================================\n");
         reporte.append("                 FACTOR DE AJUSTE (VAF)                  \n");
         reporte.append("=========================================================\n\n");
 
@@ -284,7 +290,7 @@ public class HelloController {
             String nombreGSC = opcionesGSCs[i][0];
             int puntajeDeEstaGSC = 0;
 
-            // Evaluamos cuál casilla del 0 al 5 fue seleccionada
+            // Evaluar casilla del 0 al 5 que fue seleccionada
             for (int puntaje = 0; puntaje <= 5; puntaje++) {
                 if (grupo[puntaje].isSelected()) {
                     puntajeDeEstaGSC = puntaje;
@@ -299,9 +305,9 @@ public class HelloController {
         // Aplicación de la fórmula estándar de la norma IFPUG
         double vaf = 0.65 + (0.01 * sumaGSCs);
 
-        if (vaf < 0.85) {
+        if (vaf < 0.65) {
             complejidadSistema = "Sistema muy simple";
-        } else if (vaf >= 0.85 && vaf <= 1.15) {
+        } else if (vaf >= 0.65 && vaf <= 1.15) {
             complejidadSistema = "Sistema promedio";
         } else {
             complejidadSistema = "Sistema altamente complejo";
@@ -312,7 +318,7 @@ public class HelloController {
         reporte.append("\n---------------------------------------------------------\n");
         reporte.append(String.format("Suma Total del Grado de Influencia (GSCs): %d\n", sumaGSCs));
         reporte.append(String.format("Factor de Ajuste de Valor Calculado (VAF): %.2f\n", vaf));
-        reporte.append(String.format("Complejidad del sistema: %s\n", complejidadSistema));
+        reporte.append(String.format("Complejidad del sistema: %s de influencia\n", complejidadSistema));
         reporte.append(String.format("Puntos de función con ajuste APF = %d\n", totalPuntosFuncionAjustados));
 
         reporte.append("\n=========================================================\n");
@@ -321,20 +327,29 @@ public class HelloController {
 
         // Prevenir colapso por división entre cero si no hay puntos de función calculados
         if (totalPuntosFuncionSinAjuste > 0) {
-            productividad = 8; // Tasa fija base de horas por punto
             esfuerzo = totalPuntosFuncionAjustados * productividad;
-            costo = (int) esfuerzo * costo_hora;
-            numeroPersonasEstimado = (double) esfuerzo / (numeroDeMeses * 160);
-            tiempo = (double) esfuerzo / (numeroPersonas * 160);
-            tiempoAjuste = (double) esfuerzo / (numeroPersonas * 160 * eficiencia);
+            costo = (double)esfuerzo * costo_hora;
+            tiempoAjuste = ((double)esfuerzo/(numeroPersonas*160*eficiencia));
 
             // (Tus appends de reporte se quedan exactamente igual)
+            reporte.append(String.format("Productividad de: %d horas/AFP por experiencia, tecnologia y complejidad real\n", productividad));
             reporte.append(String.format("Esfuerzo: %d horas\n", esfuerzo));
-            reporte.append(String.format("Productividad en 8 horas laborales: %d horas/AFP\n", productividad));
-            reporte.append(String.format("%.2f trabajadores necesarios en un tiempo estimado de %.2f meses: \n", numeroPersonasEstimado, numeroDeMeses));
-            reporte.append(String.format("Tiempo estimado para terminar el producto %.2f meses\n", tiempo));
+
+            //En caso de que no conocer el tiempo que necesita el proyecto en meses
+            if(numeroPersonas == 0.0){
+                numeroPersonasEstimado = (double) esfuerzo / (numeroDeMeses * 160);
+                reporte.append(String.format("En %.2f meses se necesita de %.2f personas\n", numeroDeMeses, numeroPersonasEstimado));
+            }else{
+                //En caso de no conocer el número de personas necesarias para el tiempo definido en meses
+                if(numeroDeMeses == 0.0){
+                    tiempo = (double) esfuerzo / (numeroPersonas * 160);
+                    reporte.append(String.format("Para %.2f personas el tiempo estimado para terminar el proyecto es en %.2f meses\n", numeroPersonas, tiempo));
+                }else{
+                    reporte.append("Es necesario conocer el tiempo o numero de personas necesarios para el proyecto\n");
+                }
+            }
             reporte.append(String.format("Tiempo estimado para terminar el producto con ajuste realista del 0.7 de eficiencia %.2f\n", tiempoAjuste));
-            reporte.append(String.format("Costo del proyecto para un programador Junior que gana $120/h: %d\n", costo));
+            reporte.append(String.format("Costo del proyecto para un programador Junior que gana $81.87/h: $%.2f pesos mexicanos\n", costo));
 
         } else {
             reporte.append("No se puede calcular productividad ni esfuerzo: Los Puntos de Función Sin Ajustar deben ser mayores a 0.\n");
@@ -778,7 +793,7 @@ public class HelloController {
         sb.append(String.format("%-18s | %-15d | %-15.2f | %-15.2f\n", "TOTAL ESTIMADO", esfuerzo, costo, tiempoAjuste));
     }
 
-    //Metodo para verificar si son los empleado necesarios para los puntos de funcion calculados
+    //Metodo para verificar si los empleado necesarios para los puntos de función calculados
     private void recomendacionEquipo(long apf ,StringBuilder sb){
         String personarNecesarias = "";
         if(apf <= 0){
@@ -796,6 +811,7 @@ public class HelloController {
         sb.append(personarNecesarias);
     }
 
+    //Metodo para vaciar todos los campos llenos
     @FXML
     protected void onLimpiarCamposClick() {
         // 1. Limpiar los TextFields principales de entrada de texto
@@ -842,8 +858,8 @@ public class HelloController {
             onLimpiarCamposClick();
 
             // 2. Definir parámetros de trabajo estimados por defecto
-            numeroDePersonasEnEquipo.setText("3");
-            numeroDeMesesDelTrabajo.setText("1");
+            numeroDePersonasEnEquipo.setText("1");
+            numeroDeMesesDelTrabajo.setText("0");
 
             // 3. Asignar las cantidades exactas de funciones del PDF
             numeroFuncionesDatosILF.setText("4");
@@ -914,13 +930,13 @@ public class HelloController {
                 listaEI.get(3).det.setText("id,nombreMascota,raza,edad,nombreDueno,telefono,descripcion,medicamentos,cajas");
                 listaEI.get(3).ftr.setText("Tabla_Pacientes");
             }
-            // EI 5: Modificar Paciente (8 DETs, 1 FTR)
+            // EI 5: Modificar Paciente (8 DET, 1 FTR)
             if (listaEI.size() >= 5) {
                 listaEI.get(4).name.setText("Modificar Paciente");
                 listaEI.get(4).det.setText("nombreMascota,raza,edad,nombreDueno,telefono,descripcion,medicamento,cajas");
                 listaEI.get(4).ftr.setText("Tabla_Pacientes");
             }
-            // EI 6: Modificar Contrsena (2 DETs, 1 FTR)
+            // EI 6: Modificar Contrsena (2 DET, 1 FTR)
             if (listaEI.size() >= 5) {
                 listaEI.get(5).name.setText("Modificar Contraseña");
                 listaEI.get(5).det.setText("contrasenaAnterior,contranaActual");
@@ -987,19 +1003,19 @@ public class HelloController {
             // 9. CONFIGURAR VALORES DE LAS 14 GSCs (Sección 7 del PDF)
             // =========================================================================
             int[] valoresGSCs = {
-                    2, // 1. Comunicación de datos (Usa APIs estándar)
-                    1, // 2. Procesamiento distribuido (Preparación diferida)
+                    3, // 1. Comunicación de datos (Usa APIs estándar)
+                    0, // 2. Procesamiento distribuido (Preparación diferida)
                     3, // 3. Rendimiento (Tiempos de respuesta estrictos < 2 seg)
                     2, // 4. Configuración del equipamiento (Laptops estándar de la empresa)
-                    3, // 5. Tasa de transacciones (Optimización de base de datos)
-                    4, // 6. Entrada de datos en línea (24% al 30% interactivo)
-                    3, // 7. Eficiencia del usuario final (Teclas rápidos/autocompletado)
-                    4, // 8. Actualización en línea (Protección contra pérdidas)
+                    2, // 5. Tasa de transacciones (Optimización de base de datos)
+                    5, // 6. Entrada de datos en línea (24% al 30% interactivo)
+                    4, // 7. Eficiencia del usuario final (Teclas rápidos/autocompletado)
+                    3, // 8. Actualización en línea (Protección contra pérdidas)
                     3, // 9. Procesamiento complejo (Lógica extensa / If-Then-Else)
                     1, // 10. Reusabilidad (Código reusable internamente)
                     1, // 11. Facilidad de instalación (Instalación manual con guía)
                     2, // 12. Facilidad de operación (Alertas de error básicas)
-                    2, // 13. Ubicaciones múltiples (Mismo hardware en sucursales)
+                    1, // 13. Ubicaciones múltiples (Mismo hardware en sucursales)
                     2  // 14. Facilidad de cambio (Tablas de parámetros simples)
             };
 
@@ -1012,10 +1028,10 @@ public class HelloController {
 
             txtResumen.setText("¡Métricas completas de la Veterinaria 'Bloom' cargadas con éxito!\n" +
                     "Se mapearon:\n" +
-                    "- 4 Funciones de Datos (ILF)\n" +
-                    "- 6 Entradas Externas (EI)\n" +
-                    "- 3 Salidas Externas (EO)\n" +
-                    "- 5 Consultas Externas (EQ)\n" +
+                    "- Funciones de Datos (ILF)\n" +
+                    "- Entradas Externas (EI)\n" +
+                    "- Salidas Externas (EO)\n" +
+                    "- Consultas Externas (EQ)\n" +
                     "- Las 14 GSCs con los pesos del PDF.\n\n" +
                     "Ya puedes pulsar el botón 'Calcular Puntos de Función Totales'.");
         }
