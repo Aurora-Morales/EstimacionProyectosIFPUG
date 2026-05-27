@@ -39,9 +39,9 @@ public class HelloController {
     //Este valor no es universal, depende de:
     //    -experiencia del equipo
     //    -tecnología
-        //    -complejidad real
+    //    -complejidad real
     long productividad = 10; // Tasa fija base de horas por punto
-    double costo_hora = 81.87; // Sueldo de un Líder de proyectos en México según la info
+    double costo_hora = 156; // Sueldo de un desarrollador en java + spring
     double eficiencia = 0.7;
 
     // Matriz con los títulos y las opciones exactas proporcionadas de las 14 GSCS
@@ -241,6 +241,7 @@ public class HelloController {
         int loc = 0;
         double numeroPersonas;
         double numeroDeMeses;
+        double velocidad = 0;
 
         //VAlidar si no se ingresan numeros
         try {
@@ -367,9 +368,15 @@ public class HelloController {
         estimacionxFasesDelCicloDeVida(esfuerzo, costo, tiempoAjuste, reporte);
 
         reporte.append("\n=========================================================\n");
+        velocidad = totalPuntosFuncionSinAjuste/tiempo;
+        reporte.append(String.format("Velocidad de entrega: %.2f PF/mes\n", velocidad));
+        reporte.append("\n=========================================================\n");
+
+
+        reporte.append("\n=========================================================\n");
         reporte.append("               ESTIMACION DEL TAMAÑO DEL CODIGO            \n");
         reporte.append("=========================================================\n\n");
-        loc = 60*totalPuntosFuncionSinAjuste;
+        loc = 45*totalPuntosFuncionSinAjuste;
         reporte.append(String.format("Lineas de código necesarias para el proyecto: %d\n", loc));
 
         txtResumen.setText(reporte.toString());
